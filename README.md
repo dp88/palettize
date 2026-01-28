@@ -35,19 +35,9 @@ palettize -i <INPUT> -o <OUTPUT> [OPTIONS]
 | `-o, --output <FILE>` | Output image path |
 | `-p, --palette <COLORS>` | Comma-separated hex colors (e.g., `#000000,#FFFFFF`) |
 | `--palette-file <FILE>` | Path to a palette file (one hex color per line) |
-| `--preset <NAME>` | Use a built-in preset palette |
+| `-g, --grayscale <N>` | Generate grayscale palette with N colors (2-255) |
 | `-b, --bayer-level <N>` | Bayer matrix level 0-5 (default: 2) |
 | `-n, --noise <STRENGTH>` | Dither strength 0.0-2.0 (default: 1.0) |
-
-### Preset Palettes
-
-| Preset | Colors | Description |
-|--------|--------|-------------|
-| `bw` | 2 | Black and white |
-| `grayscale` | 6 | Six-level grayscale |
-| `rgb3bit` | 8 | 3-bit RGB (black, red, green, blue, yellow, magenta, cyan, white) |
-| `gameboy` | 4 | Nintendo Game Boy green palette |
-| `cga` | 16 | IBM CGA 16-color palette |
 
 ### Bayer Matrix Levels
 
@@ -64,14 +54,17 @@ The `--bayer-level` option controls the dithering pattern size:
 
 ## Examples
 
-### Using a preset palette
+### Using grayscale palettes
 
 ```bash
-# Apply Game Boy-style green palette
-palettize -i photo.png -o gameboy.png --preset gameboy
+# Convert to black and white (default)
+palettize -i photo.png -o bw.png
 
-# Convert to black and white
-palettize -i photo.png -o bw.png --preset bw
+# 6-level grayscale
+palettize -i photo.png -o gray6.png -g 6
+
+# 16-level grayscale
+palettize -i photo.png -o gray16.png -g 16
 ```
 
 ### Using custom colors
@@ -108,10 +101,10 @@ palettize -i photo.png -o output.png --palette-file my-palette.hex
 
 ```bash
 # Finer dithering pattern with reduced contrast
-palettize -i photo.png -o subtle.png --preset grayscale -b 3 -n 0.5
+palettize -i photo.png -o subtle.png -g 6 -b 3 -n 0.5
 
 # Coarser pattern with increased contrast
-palettize -i photo.png -o bold.png --preset grayscale -b 1 -n 1.5
+palettize -i photo.png -o bold.png -g 6 -b 1 -n 1.5
 ```
 
 ## Example/Test Images
