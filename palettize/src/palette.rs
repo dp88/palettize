@@ -1,27 +1,25 @@
-//! Palette parsing and preset color palettes.
+//! Palette parsing and color palettes.
 //!
 //! This module handles loading color palettes from various sources:
 //! - Hex color strings (e.g., "#FF0000")
-//! - Built-in preset palettes (e.g., "gameboy", "cga")
+//! - Generated grayscale palettes
 //!
 //! # Examples
 //!
 //! ```
-//! use palettize::{Color, Palette, Preset};
+//! use palettize::{Color, Palette, grayscale};
 //!
 //! // Create a color
 //! let red = Color::new(255, 0, 0);
 //! assert_eq!(red.r, 255);
 //!
-//! // Get a preset palette
-//! let palette = Palette::from_preset(Preset::GameBoy);
-//! assert_eq!(palette.colors().len(), 4);
+//! // Generate a grayscale palette
+//! let palette = grayscale(2); // black & white
+//! assert_eq!(palette.colors().len(), 2);
 //!
 //! // Create from tuples
 //! let palette: Palette = vec![(0, 0, 0), (255, 255, 255)].into();
 //! ```
-
-use std::str::FromStr;
 
 /// A color in the palette.
 ///
@@ -83,15 +81,15 @@ impl From<Color> for (u8, u8, u8) {
 /// A collection of colors for dithering.
 ///
 /// The `Palette` struct wraps a vector of colors and provides convenient
-/// constructors for creating palettes from presets or custom colors.
+/// constructors for creating palettes from custom colors or generators.
 ///
 /// # Examples
 ///
 /// ```
-/// use palettize::{Color, Palette, Preset};
+/// use palettize::{Color, Palette, grayscale};
 ///
-/// // From a preset
-/// let palette = Palette::from_preset(Preset::GameBoy);
+/// // From a grayscale generator
+/// let palette = grayscale(6);
 ///
 /// // From a vector of colors
 /// let palette = Palette::new(vec![
@@ -125,21 +123,6 @@ impl Palette {
         Self { colors }
     }
 
-    /// Creates a palette from a preset.
-    ///
-    /// # Examples
-    ///
-    /// ```
-    /// use palettize::{Palette, Preset};
-    ///
-    /// let palette = Palette::from_preset(Preset::GameBoy);
-    /// assert_eq!(palette.colors().len(), 4);
-    /// ```
-    pub fn from_preset(preset: Preset) -> Self {
-        let colors = get_preset_colors(preset);
-        Self { colors }
-    }
-
     /// Returns a slice of the colors in this palette.
     ///
     /// # Examples
@@ -169,77 +152,38 @@ impl From<Vec<(u8, u8, u8)>> for Palette {
     }
 }
 
-/// Available preset palettes.
+/// Generates a grayscale palette with evenly-spaced stops.
 ///
-/// These palettes are inspired by classic hardware and common use cases.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum Preset {
-    /// Black and white (2 colors)
-    Bw,
-    /// 3-bit RGB: black, red, green, blue, yellow, magenta, cyan, white (8 colors)
-    Rgb3bit,
-    /// 6-level grayscale from black to white
-    Grayscale,
-    /// Nintendo Game Boy green palette (4 colors)
-    GameBoy,
-    /// IBM CGA 16-color palette
-    Cga,
-}
-
-impl Preset {
-    /// Returns a list of all available preset names.
-    pub fn all_names() -> &'static [&'static str] {
-        &["bw", "rgb3bit", "grayscale", "gameboy", "cga"]
-    }
-}
-
-/// Error returned when parsing an unknown preset name.
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub struct ParsePresetError {
-    name: String,
-}
-
-impl std::fmt::Display for ParsePresetError {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(
-            f,
-            "Unknown preset: '{}'. Available presets: {}",
-            self.name,
-            Preset::all_names().join(", ")
-        )
-    }
-}
-
-impl std::error::Error for ParsePresetError {}
-
-impl FromStr for Preset {
-    type Err = ParsePresetError;
-
-    fn from_str(s: &str) -> Result<Self, Self::Err> {
-        match s.to_lowercase().as_str() {
-            "bw" => Ok(Preset::Bw),
-            "rgb3bit" => Ok(Preset::Rgb3bit),
-            "grayscale" => Ok(Preset::Grayscale),
-            "gameboy" => Ok(Preset::GameBoy),
-            "cga" => Ok(Preset::Cga),
-            _ => Err(ParsePresetError {
-                name: s.to_string(),
-            }),
-        }
-    }
-}
-
-impl std::fmt::Display for Preset {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        let name = match self {
-            Preset::Bw => "bw",
-            Preset::Rgb3bit => "rgb3bit",
-            Preset::Grayscale => "grayscale",
-            Preset::GameBoy => "gameboy",
-            Preset::Cga => "cga",
-        };
-        write!(f, "{}", name)
-    }
+/// # Arguments
+/// * `stops` - Number of colors (2-256). 2 = black & white, 256 = full grayscale.
+///
+/// # Panics
+/// Panics if stops < 2.
+///
+/// # Examples
+///
+/// ```
+/// use palettize::{grayscale, Color};
+///
+/// // Black & white
+/// let bw = grayscale(2);
+/// assert_eq!(bw.colors().len(), 2);
+/// assert_eq!(bw.colors()[0], Color::new(0, 0, 0));
+/// assert_eq!(bw.colors()[1], Color::new(255, 255, 255));
+///
+/// // 6-level grayscale
+/// let gray6 = grayscale(6);
+/// assert_eq!(gray6.colors().len(), 6);
+/// ```
+pub fn grayscale(stops: u8) -> Palette {
+    assert!(stops >= 2, "grayscale requires at least 2 stops");
+    let colors = (0..stops)
+        .map(|i| {
+            let v = (i as u32 * 255 / (stops as u32 - 1)) as u8;
+            Color::new(v, v, v)
+        })
+        .collect();
+    Palette::new(colors)
 }
 
 /// Error returned when parsing an invalid hex color.
@@ -311,58 +255,6 @@ pub fn parse_hex_color(hex: &str) -> Result<Color, ParseColorError> {
     Ok(Color::new(r, g, b))
 }
 
-/// Returns the colors for a preset palette.
-///
-/// This is the internal function that returns a `Vec<Color>`.
-/// For public use, prefer [`Palette::from_preset`].
-fn get_preset_colors(preset: Preset) -> Vec<Color> {
-    match preset {
-        Preset::Bw => vec![Color::new(0, 0, 0), Color::new(255, 255, 255)],
-        Preset::Rgb3bit => vec![
-            Color::new(0, 0, 0),
-            Color::new(255, 0, 0),
-            Color::new(0, 255, 0),
-            Color::new(0, 0, 255),
-            Color::new(255, 255, 0),
-            Color::new(255, 0, 255),
-            Color::new(0, 255, 255),
-            Color::new(255, 255, 255),
-        ],
-        Preset::Grayscale => vec![
-            Color::new(0, 0, 0),
-            Color::new(51, 51, 51),
-            Color::new(102, 102, 102),
-            Color::new(153, 153, 153),
-            Color::new(204, 204, 204),
-            Color::new(255, 255, 255),
-        ],
-        Preset::GameBoy => vec![
-            Color::new(15, 56, 15),
-            Color::new(48, 98, 48),
-            Color::new(139, 172, 15),
-            Color::new(155, 188, 15),
-        ],
-        Preset::Cga => vec![
-            Color::new(0, 0, 0),
-            Color::new(0, 0, 170),
-            Color::new(0, 170, 0),
-            Color::new(0, 170, 170),
-            Color::new(170, 0, 0),
-            Color::new(170, 0, 170),
-            Color::new(170, 85, 0),
-            Color::new(170, 170, 170),
-            Color::new(85, 85, 85),
-            Color::new(85, 85, 255),
-            Color::new(85, 255, 85),
-            Color::new(85, 255, 255),
-            Color::new(255, 85, 85),
-            Color::new(255, 85, 255),
-            Color::new(255, 255, 85),
-            Color::new(255, 255, 255),
-        ],
-    }
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -414,9 +306,33 @@ mod tests {
     }
 
     #[test]
-    fn test_palette_from_preset() {
-        let palette = Palette::from_preset(Preset::GameBoy);
-        assert_eq!(palette.colors().len(), 4);
+    fn test_grayscale_2_stops() {
+        let palette = grayscale(2);
+        assert_eq!(palette.colors().len(), 2);
+        assert_eq!(palette.colors()[0], Color::new(0, 0, 0));
+        assert_eq!(palette.colors()[1], Color::new(255, 255, 255));
+    }
+
+    #[test]
+    fn test_grayscale_6_stops() {
+        let palette = grayscale(6);
+        assert_eq!(palette.colors().len(), 6);
+        assert_eq!(palette.colors()[0], Color::new(0, 0, 0));
+        assert_eq!(palette.colors()[5], Color::new(255, 255, 255));
+    }
+
+    #[test]
+    fn test_grayscale_256_stops() {
+        let palette = grayscale(255);
+        assert_eq!(palette.colors().len(), 255);
+        assert_eq!(palette.colors()[0], Color::new(0, 0, 0));
+        assert_eq!(palette.colors()[254], Color::new(255, 255, 255));
+    }
+
+    #[test]
+    #[should_panic(expected = "grayscale requires at least 2 stops")]
+    fn test_grayscale_1_stop_panics() {
+        grayscale(1);
     }
 
     #[test]
@@ -453,44 +369,5 @@ mod tests {
     #[test]
     fn test_parse_hex_invalid_chars() {
         assert!(parse_hex_color("#GGGGGG").is_err());
-    }
-
-    #[test]
-    fn test_preset_from_str() {
-        assert_eq!("bw".parse::<Preset>().unwrap(), Preset::Bw);
-        assert_eq!("BW".parse::<Preset>().unwrap(), Preset::Bw);
-        assert_eq!("gameboy".parse::<Preset>().unwrap(), Preset::GameBoy);
-        assert_eq!("GameBoy".parse::<Preset>().unwrap(), Preset::GameBoy);
-    }
-
-    #[test]
-    fn test_preset_from_str_unknown() {
-        assert!("unknown".parse::<Preset>().is_err());
-    }
-
-    #[test]
-    fn test_preset_display() {
-        assert_eq!(Preset::Bw.to_string(), "bw");
-        assert_eq!(Preset::GameBoy.to_string(), "gameboy");
-    }
-
-    #[test]
-    fn test_preset_palette_bw() {
-        let palette = Palette::from_preset(Preset::Bw);
-        assert_eq!(palette.colors().len(), 2);
-        assert_eq!(palette.colors()[0], Color::new(0, 0, 0));
-        assert_eq!(palette.colors()[1], Color::new(255, 255, 255));
-    }
-
-    #[test]
-    fn test_preset_palette_gameboy() {
-        let palette = Palette::from_preset(Preset::GameBoy);
-        assert_eq!(palette.colors().len(), 4);
-    }
-
-    #[test]
-    fn test_preset_palette_cga() {
-        let palette = Palette::from_preset(Preset::Cga);
-        assert_eq!(palette.colors().len(), 16);
     }
 }

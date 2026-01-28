@@ -138,8 +138,8 @@ fn test_david_image_exact_match() {
             input_path.to_str().unwrap(),
             "-o",
             output_path.to_str().unwrap(),
-            "--preset",
-            "grayscale",
+            "-g",
+            "6",
             "-b",
             "2",
             "-n",
@@ -180,7 +180,7 @@ fn test_cli_help() {
     assert!(output.status.success());
     let stdout = String::from_utf8_lossy(&output.stdout);
     assert!(stdout.contains("palettize"));
-    assert!(stdout.contains("--preset"));
+    assert!(stdout.contains("--grayscale"));
     assert!(stdout.contains("--palette"));
 }
 
@@ -201,38 +201,13 @@ fn test_cli_version() {
 }
 
 #[test]
-fn test_cli_missing_palette_error() {
-    let manifest_dir = env!("CARGO_MANIFEST_DIR");
-    let input_path = Path::new(manifest_dir).join("tests/fixtures/david-in.png");
-
-    let output = Command::new("cargo")
-        .args([
-            "run",
-            "-p",
-            "palettize-cli",
-            "--",
-            "-i",
-            input_path.to_str().unwrap(),
-            "-o",
-            "/tmp/test-output.png",
-        ])
-        .current_dir(Path::new(manifest_dir).parent().unwrap())
-        .output()
-        .expect("Failed to execute palettize");
-
-    // Should fail because no palette specified
-    assert!(!output.status.success());
-    let stderr = String::from_utf8_lossy(&output.stderr);
-    assert!(stderr.contains("palette must be specified") || stderr.contains("--preset"));
-}
-
-#[test]
-fn test_preset_gameboy() {
+fn test_cli_default_palette() {
+    // When no palette is specified, should default to black & white
     let manifest_dir = env!("CARGO_MANIFEST_DIR");
     let input_path = Path::new(manifest_dir).join("tests/fixtures/david-in.png");
 
     let output_dir = tempfile::tempdir().expect("Failed to create temp dir");
-    let output_path = output_dir.path().join("gameboy-output.png");
+    let output_path = output_dir.path().join("default-output.png");
 
     let status = Command::new("cargo")
         .args([
@@ -244,28 +219,24 @@ fn test_preset_gameboy() {
             input_path.to_str().unwrap(),
             "-o",
             output_path.to_str().unwrap(),
-            "--preset",
-            "gameboy",
         ])
         .current_dir(Path::new(manifest_dir).parent().unwrap())
         .status()
         .expect("Failed to execute palettize");
 
+    // Should succeed with default black & white palette
     assert!(status.success());
     assert!(output_path.exists());
 
-    // Verify output only contains gameboy palette colors
+    // Verify output only contains black and white
     let img = image::open(&output_path).expect("Failed to open output");
     let rgb = img.to_rgb8();
-    let gameboy_colors: HashSet<(u8, u8, u8)> =
-        [(15, 56, 15), (48, 98, 48), (139, 172, 15), (155, 188, 15)]
-            .into_iter()
-            .collect();
+    let bw_colors: HashSet<(u8, u8, u8)> = [(0, 0, 0), (255, 255, 255)].into_iter().collect();
 
     for pixel in rgb.pixels() {
         let color = (pixel[0], pixel[1], pixel[2]);
         assert!(
-            gameboy_colors.contains(&color),
+            bw_colors.contains(&color),
             "Unexpected color in output: {:?}",
             color
         );

@@ -20,10 +20,10 @@
 //! # Example
 //!
 //! ```no_run
-//! use palettize::{dither, Palette, Preset};
+//! use palettize::{dither, grayscale};
 //!
 //! let img = image::open("input.png").unwrap();
-//! let palette = Palette::from_preset(Preset::GameBoy);
+//! let palette = grayscale(2); // black & white
 //! let output = dither(&img, &palette);
 //! output.save("output.png").unwrap();
 //! ```
@@ -150,10 +150,10 @@ pub fn find_two_nearest(color: (f32, f32, f32), palette: &[Color]) -> (Color, Co
 /// # Examples
 ///
 /// ```no_run
-/// use palettize::{apply_dithering, generate_bayer_matrix, Palette, Preset};
+/// use palettize::{apply_dithering, generate_bayer_matrix, grayscale};
 ///
 /// let img = image::open("input.png").unwrap();
-/// let palette = Palette::from_preset(Preset::GameBoy);
+/// let palette = grayscale(6); // 6-level grayscale
 /// let bayer = generate_bayer_matrix(2);
 ///
 /// let output = apply_dithering(&img, palette.colors(), &bayer, 1.0);

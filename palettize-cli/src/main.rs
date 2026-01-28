@@ -6,14 +6,15 @@
 //! # Usage
 //!
 //! ```text
-//! palettize -i input.png -o output.png --preset gameboy
+//! palettize -i input.png -o output.png
+//! palettize -i input.png -o output.png -g 6
 //! palettize -i input.png -o output.png -p '#000000,#FFFFFF'
 //! palettize -i input.png -o output.png --palette-file colors.hex -b 3 -n 0.5
 //! ```
 
 use anyhow::{Context, Result};
 use clap::Parser;
-use palettize::{Color, Palette, Preset, dither_with_options, parse_hex_color};
+use palettize::{Color, Palette, dither_with_options, grayscale, parse_hex_color};
 use std::path::{Path, PathBuf};
 
 /// Apply ordered Bayer dithering to images with custom color palettes.
@@ -31,8 +32,11 @@ Bayer dithering. This technique creates the characteristic cross-hatch patterns
 seen in classic video games and pixel art.
 
 EXAMPLES:
-    # Use a preset palette
-    palettize -i photo.png -o output.png --preset gameboy
+    # Default: black & white
+    palettize -i photo.png -o output.png
+
+    # Grayscale with 6 levels
+    palettize -i photo.png -o output.png -g 6
 
     # Use custom colors
     palettize -i photo.png -o output.png -p '#000000,#555555,#AAAAAA,#FFFFFF'
@@ -41,7 +45,7 @@ EXAMPLES:
     palettize -i photo.png -o output.png --palette-file my-colors.hex
 
     # Adjust dithering parameters
-    palettize -i photo.png -o output.png --preset bw -b 3 -n 0.5
+    palettize -i photo.png -o output.png -g 2 -b 3 -n 0.5
 ")]
 struct Args {
     /// Input image path (supports PNG, JPEG, GIF, BMP, etc.)
@@ -55,20 +59,20 @@ struct Args {
     /// Custom palette as comma-separated hex colors.
     ///
     /// Example: "#000000,#FFFFFF,#FF0000"
-    #[arg(short, long, conflicts_with_all = ["preset", "palette_file"])]
+    #[arg(short, long, conflicts_with_all = ["grayscale", "palette_file"])]
     palette: Option<String>,
 
     /// Path to a palette file containing hex colors (one per line).
     ///
     /// Lines starting with '//' are treated as comments.
-    #[arg(long, conflicts_with_all = ["preset", "palette"], value_name = "FILE")]
+    #[arg(long, conflicts_with_all = ["grayscale", "palette"], value_name = "FILE")]
     palette_file: Option<PathBuf>,
 
-    /// Use a preset palette.
+    /// Generate a grayscale palette with N colors (2-255).
     ///
-    /// Available presets: bw, rgb3bit, grayscale, gameboy, cga
-    #[arg(long, conflicts_with_all = ["palette", "palette_file"], value_name = "NAME")]
-    preset: Option<Preset>,
+    /// Use 2 for black & white (default), 6 for 6-level grayscale, etc.
+    #[arg(short, long, conflicts_with_all = ["palette", "palette_file"], value_name = "N", value_parser = clap::value_parser!(u8).range(2..=255))]
+    grayscale: Option<u8>,
 
     /// Bayer matrix level (0-5).
     ///
@@ -129,21 +133,11 @@ fn main() -> Result<()> {
     let args = Args::parse();
 
     // Validate arguments
-    if args.palette.is_none() && args.palette_file.is_none() && args.preset.is_none() {
-        anyhow::bail!(
-            "A palette must be specified. Use one of:\n  \
-             --preset <NAME>      (available: {})\n  \
-             --palette <COLORS>   (comma-separated hex colors)\n  \
-             --palette-file <FILE>",
-            Preset::all_names().join(", ")
-        );
-    }
-
     if args.noise < 0.0 || args.noise > 2.0 {
         anyhow::bail!("Dither strength (--noise) must be between 0.0 and 2.0");
     }
 
-    // Parse palette
+    // Parse palette (default to black & white if nothing specified)
     let palette: Palette = if let Some(palette_str) = args.palette {
         let colors = palette_str
             .split(',')
@@ -153,10 +147,10 @@ fn main() -> Result<()> {
         Palette::new(colors)
     } else if let Some(palette_path) = args.palette_file {
         load_palette_file(&palette_path)?
-    } else if let Some(preset) = args.preset {
-        Palette::from_preset(preset)
     } else {
-        unreachable!()
+        // Default to black & white (grayscale 2) if no option specified
+        let stops = args.grayscale.unwrap_or(2);
+        grayscale(stops)
     };
 
     if palette.colors().is_empty() {

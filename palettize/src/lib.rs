@@ -15,13 +15,13 @@
 //! The simplest way to dither an image is with the [`dither()`] function:
 //!
 //! ```no_run
-//! use palettize::{dither, Palette, Preset};
+//! use palettize::{dither, grayscale};
 //!
 //! // Load an image
 //! let img = image::open("input.png").unwrap();
 //!
-//! // Get a preset palette
-//! let palette = Palette::from_preset(Preset::GameBoy);
+//! // Generate a grayscale palette (black & white)
+//! let palette = grayscale(2);
 //!
 //! // Apply dithering with default settings
 //! let output = dither(&img, &palette);
@@ -33,10 +33,10 @@
 //! For more control over dithering parameters, use [`dither_with_options()`]:
 //!
 //! ```no_run
-//! use palettize::{dither_with_options, Palette, Preset};
+//! use palettize::{dither_with_options, grayscale};
 //!
 //! let img = image::open("input.png").unwrap();
-//! let palette = Palette::from_preset(Preset::GameBoy);
+//! let palette = grayscale(6); // 6-level grayscale
 //!
 //! // Bayer level 3 = 16×16 matrix, noise 0.5 = subtle dithering
 //! let output = dither_with_options(&img, &palette, 3, 0.5);
@@ -70,15 +70,13 @@
 //! ]);
 //! ```
 //!
-//! ## Available Presets
+//! ## Grayscale Palettes
 //!
-//! The library includes several built-in palettes via [`Preset`]:
+//! Use [`grayscale()`] to generate evenly-spaced grayscale palettes:
 //!
-//! - [`Preset::Bw`] - Black and white (2 colors)
-//! - [`Preset::Rgb3bit`] - 3-bit RGB (8 colors: black, red, green, blue, yellow, magenta, cyan, white)
-//! - [`Preset::Grayscale`] - 6-level grayscale
-//! - [`Preset::GameBoy`] - Nintendo Game Boy green palette (4 colors)
-//! - [`Preset::Cga`] - IBM CGA 16-color palette
+//! - `grayscale(2)` - Black and white
+//! - `grayscale(6)` - 6-level grayscale
+//! - `grayscale(256)` - Full 8-bit grayscale
 //!
 //! ## Bayer Matrix Levels
 //!
@@ -105,7 +103,7 @@ use image::{DynamicImage, RgbImage};
 // Re-export main types and functions for convenience
 pub use bayer::generate_bayer_matrix;
 pub use dither::{apply_dithering, color_distance_sq, find_two_nearest};
-pub use palette::{Color, Palette, ParseColorError, ParsePresetError, Preset, parse_hex_color};
+pub use palette::{Color, Palette, ParseColorError, grayscale, parse_hex_color};
 
 /// Default Bayer matrix level used by [`dither()`].
 ///
@@ -138,10 +136,10 @@ pub const DEFAULT_NOISE: f32 = 1.0;
 /// # Examples
 ///
 /// ```no_run
-/// use palettize::{dither, Palette, Preset};
+/// use palettize::{dither, grayscale};
 ///
 /// let img = image::open("input.png").unwrap();
-/// let palette = Palette::from_preset(Preset::GameBoy);
+/// let palette = grayscale(2); // black & white
 /// let output = dither(&img, &palette);
 /// output.save("output.png").unwrap();
 /// ```
@@ -194,10 +192,10 @@ pub fn dither(image: &DynamicImage, palette: &Palette) -> RgbImage {
 /// # Examples
 ///
 /// ```no_run
-/// use palettize::{dither_with_options, Palette, Preset};
+/// use palettize::{dither_with_options, grayscale};
 ///
 /// let img = image::open("input.png").unwrap();
-/// let palette = Palette::from_preset(Preset::GameBoy);
+/// let palette = grayscale(6); // 6-level grayscale
 ///
 /// // Smooth gradients with subtle dithering
 /// let output = dither_with_options(&img, &palette, 3, 0.5);
