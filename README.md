@@ -114,6 +114,21 @@ palettize -i photo.png -o subtle.png --preset grayscale -b 3 -n 0.5
 palettize -i photo.png -o bold.png --preset grayscale -b 1 -n 1.5
 ```
 
-## License
+## Example/Test Images
+The example images used for testing palettize are in the public domain.
 
-MIT
+### 🇫🇷 Gismonda (1919) by Georges Antoine Rochegrosse
+
+Rochegrosse (1859-1938) was a French academic painter known for dramatic historical and mythological scenes. He won the prestigious Prix de Rome in 1882 and became a prominent figure in the Parisian art world, illustrating works by Flaubert and Baudelaire. His later career shifted toward Orientalist subjects following travels to Algeria.
+
+### 🇫🇷 Villa Farnese With Gardens At Caprarola (1764) by Hubert Robert
+
+Robert (1733-1808) was a French painter celebrated for his romantic depictions of ruins and garden landscapes, earning him the nickname "Robert des Ruines." He spent eleven years in Rome where he developed his signature style of architectural capriccios and picturesque decay. After the French Revolution, he was briefly imprisoned but survived to become one of the first curators of the Louvre.
+
+### 🇺🇸 The Departure (1837) by Thomas Cole
+
+Cole (1801-1848) was an English-born American painter who founded the Hudson River School, the first major American art movement. His allegorical series "The Course of Empire" and "The Voyage of Life" established landscape painting as a vehicle for moral and philosophical themes. He championed the American wilderness as a subject worthy of high art during a period of rapid westward expansion.
+
+### 🇩🇰 Spring Landscape (1893) by Peder Mørk Mønsted
+
+Mønsted (1859-1941) was a Danish realist painter renowned for his luminous landscapes and meticulous attention to natural light. He traveled extensively throughout Europe and North Africa, painting en plein air with remarkable precision. His works are characterized by their photographic clarity and masterful depiction of water, foliage, and atmospheric conditions.
