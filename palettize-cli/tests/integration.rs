@@ -118,7 +118,7 @@ fn analyze_image_differences(
 
 #[test]
 fn test_david_image_exact_match() {
-    // Get the manifest directory (palettize directory)
+    // Get the manifest directory (palettize-cli directory)
     let manifest_dir = env!("CARGO_MANIFEST_DIR");
     let input_path = Path::new(manifest_dir).join("tests/fixtures/david-in.png");
     let expected_path = Path::new(manifest_dir).join("tests/fixtures/david-out.png");
@@ -127,10 +127,12 @@ fn test_david_image_exact_match() {
     let output_dir = tempfile::tempdir().expect("Failed to create temp dir");
     let output_path = output_dir.path().join("david-generated.png");
 
-    // Run palettize command
+    // Run palettize command via cargo run -p palettize-cli
     let status = Command::new("cargo")
         .args([
             "run",
+            "-p",
+            "palettize-cli",
             "--",
             "-i",
             input_path.to_str().unwrap(),
@@ -143,7 +145,7 @@ fn test_david_image_exact_match() {
             "-n",
             "0.05",
         ])
-        .current_dir(manifest_dir)
+        .current_dir(Path::new(manifest_dir).parent().unwrap())
         .status()
         .expect("Failed to execute palettize");
 
@@ -170,8 +172,8 @@ fn test_cli_help() {
     let manifest_dir = env!("CARGO_MANIFEST_DIR");
 
     let output = Command::new("cargo")
-        .args(["run", "--", "--help"])
-        .current_dir(manifest_dir)
+        .args(["run", "-p", "palettize-cli", "--", "--help"])
+        .current_dir(Path::new(manifest_dir).parent().unwrap())
         .output()
         .expect("Failed to execute palettize --help");
 
@@ -187,15 +189,15 @@ fn test_cli_version() {
     let manifest_dir = env!("CARGO_MANIFEST_DIR");
 
     let output = Command::new("cargo")
-        .args(["run", "--", "--version"])
-        .current_dir(manifest_dir)
+        .args(["run", "-p", "palettize-cli", "--", "--version"])
+        .current_dir(Path::new(manifest_dir).parent().unwrap())
         .output()
         .expect("Failed to execute palettize --version");
 
     assert!(output.status.success());
     let stdout = String::from_utf8_lossy(&output.stdout);
     assert!(stdout.contains("palettize"));
-    assert!(stdout.contains("0.1.0"));
+    assert!(stdout.contains("0.2.0"));
 }
 
 #[test]
@@ -206,13 +208,15 @@ fn test_cli_missing_palette_error() {
     let output = Command::new("cargo")
         .args([
             "run",
+            "-p",
+            "palettize-cli",
             "--",
             "-i",
             input_path.to_str().unwrap(),
             "-o",
             "/tmp/test-output.png",
         ])
-        .current_dir(manifest_dir)
+        .current_dir(Path::new(manifest_dir).parent().unwrap())
         .output()
         .expect("Failed to execute palettize");
 
@@ -233,6 +237,8 @@ fn test_preset_gameboy() {
     let status = Command::new("cargo")
         .args([
             "run",
+            "-p",
+            "palettize-cli",
             "--",
             "-i",
             input_path.to_str().unwrap(),
@@ -241,7 +247,7 @@ fn test_preset_gameboy() {
             "--preset",
             "gameboy",
         ])
-        .current_dir(manifest_dir)
+        .current_dir(Path::new(manifest_dir).parent().unwrap())
         .status()
         .expect("Failed to execute palettize");
 
@@ -277,6 +283,8 @@ fn test_custom_palette() {
     let status = Command::new("cargo")
         .args([
             "run",
+            "-p",
+            "palettize-cli",
             "--",
             "-i",
             input_path.to_str().unwrap(),
@@ -285,7 +293,7 @@ fn test_custom_palette() {
             "-p",
             "#FF0000,#00FF00,#0000FF",
         ])
-        .current_dir(manifest_dir)
+        .current_dir(Path::new(manifest_dir).parent().unwrap())
         .status()
         .expect("Failed to execute palettize");
 

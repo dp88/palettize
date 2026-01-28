@@ -16,57 +16,75 @@
 //! 2. Calculate a weight based on how close the pixel is to each color
 //! 3. Compare this weight against the Bayer threshold at that position
 //! 4. Choose the nearest or second-nearest color based on the comparison
+//!
+//! # Example
+//!
+//! ```no_run
+//! use palettize::{dither, Palette, Preset};
+//!
+//! let img = image::open("input.png").unwrap();
+//! let palette = Palette::from_preset(Preset::GameBoy);
+//! let output = dither(&img, &palette);
+//! output.save("output.png").unwrap();
+//! ```
 
-use crate::palette::Rgb;
+use crate::palette::Color;
 use image::{DynamicImage, GenericImageView, ImageBuffer, RgbImage};
 
 /// Calculates the squared Euclidean distance between two colors in RGB space.
 ///
 /// Using squared distance avoids an expensive square root operation while
-/// maintaining the same ordering for comparisons.
+/// maintaining the same ordering for comparisons. This is an internal function
+/// used by the dithering algorithm.
 ///
 /// # Arguments
 ///
-/// * `c1` - First color as floating-point RGB
-/// * `c2` - Second color as integer RGB tuple
+/// * `c1` - First color as floating-point RGB tuple `(r, g, b)`
+/// * `c2` - Second color as a [`Color`]
 ///
 /// # Returns
 ///
-/// The squared distance between the colors.
+/// The squared Euclidean distance between the colors in RGB space.
 ///
 /// # Examples
 ///
 /// ```
-/// use palettize::color_distance_sq;
+/// use palettize::{color_distance_sq, Color};
 ///
 /// // Distance from black to white
-/// let dist = color_distance_sq((0.0, 0.0, 0.0), (255, 255, 255));
+/// let dist = color_distance_sq((0.0, 0.0, 0.0), Color::new(255, 255, 255));
 /// assert!((dist - 195075.0).abs() < 0.001); // 255^2 * 3
 ///
 /// // Distance from a color to itself
-/// let dist = color_distance_sq((128.0, 128.0, 128.0), (128, 128, 128));
+/// let dist = color_distance_sq((128.0, 128.0, 128.0), Color::new(128, 128, 128));
 /// assert!(dist < 0.001);
 /// ```
-pub fn color_distance_sq(c1: (f32, f32, f32), c2: Rgb) -> f32 {
-    let dr = c1.0 - c2.0 as f32;
-    let dg = c1.1 - c2.1 as f32;
-    let db = c1.2 - c2.2 as f32;
+pub fn color_distance_sq(c1: (f32, f32, f32), c2: Color) -> f32 {
+    let dr = c1.0 - c2.r as f32;
+    let dg = c1.1 - c2.g as f32;
+    let db = c1.2 - c2.b as f32;
     dr * dr + dg * dg + db * db
 }
 
 /// Finds the two nearest palette colors to a source color.
 ///
-/// Returns both colors along with their squared distances, which can be used
-/// to weight the dithering decision.
+/// This function searches through the palette to find the closest and second-closest
+/// colors to the given source color, using Euclidean distance in RGB space.
+/// The distances are returned as squared values to avoid unnecessary square root
+/// operations.
 ///
 /// # Arguments
 ///
-/// * `color` - The source color as floating-point RGB
-/// * `palette` - The available palette colors
+/// * `color` - The source color as floating-point RGB tuple `(r, g, b)`
+/// * `palette` - A slice of [`Color`] values representing the available palette
 ///
 /// # Returns
 ///
-/// A tuple of `(nearest, second_nearest, nearest_distance, second_distance)`.
+/// A tuple of `(nearest, second_nearest, nearest_distance_sq, second_distance_sq)`:
+/// - `nearest` - The palette color closest to the source
+/// - `second_nearest` - The second closest palette color
+/// - `nearest_distance_sq` - Squared distance to the nearest color
+/// - `second_distance_sq` - Squared distance to the second nearest color
 ///
 /// # Panics
 ///
@@ -75,17 +93,17 @@ pub fn color_distance_sq(c1: (f32, f32, f32), c2: Rgb) -> f32 {
 /// # Examples
 ///
 /// ```
-/// use palettize::find_two_nearest;
+/// use palettize::{find_two_nearest, Color};
 ///
-/// let palette = vec![(0, 0, 0), (255, 255, 255)];
+/// let palette = vec![Color::new(0, 0, 0), Color::new(255, 255, 255)];
 /// let (nearest, second, d1, d2) = find_two_nearest((64.0, 64.0, 64.0), &palette);
 ///
 /// // Dark gray is closer to black
-/// assert_eq!(nearest, (0, 0, 0));
-/// assert_eq!(second, (255, 255, 255));
+/// assert_eq!(nearest, Color::new(0, 0, 0));
+/// assert_eq!(second, Color::new(255, 255, 255));
 /// assert!(d1 < d2);
 /// ```
-pub fn find_two_nearest(color: (f32, f32, f32), palette: &[Rgb]) -> (Rgb, Rgb, f32, f32) {
+pub fn find_two_nearest(color: (f32, f32, f32), palette: &[Color]) -> (Color, Color, f32, f32) {
     let mut best = palette[0];
     let mut second = palette[0];
     let mut best_dist = f32::MAX;
@@ -109,37 +127,41 @@ pub fn find_two_nearest(color: (f32, f32, f32), palette: &[Rgb]) -> (Rgb, Rgb, f
 
 /// Applies ordered Bayer dithering to an image.
 ///
-/// This is the main entry point for dithering an image. It processes each pixel,
-/// comparing it against the Bayer matrix threshold to decide which of the two
-/// nearest palette colors to use.
+/// This is the low-level function for dithering an image. For most use cases,
+/// prefer the higher-level [`crate::dither()`] or [`crate::dither_with_options()`]
+/// functions which provide a simpler API.
+///
+/// This function processes each pixel, comparing it against the Bayer matrix
+/// threshold to decide which of the two nearest palette colors to use.
 ///
 /// # Arguments
 ///
-/// * `img` - The input image
-/// * `palette` - The color palette to quantize to
-/// * `bayer_matrix` - The Bayer threshold matrix
+/// * `img` - The input image as a [`DynamicImage`]
+/// * `palette` - A slice of [`Color`] values to quantize to
+/// * `bayer_matrix` - The Bayer threshold matrix (use [`crate::generate_bayer_matrix()`])
 /// * `noise_intensity` - Dither strength (0.0-2.0). Higher values increase contrast
-///   in the dithering pattern. A value of 1.0 is neutral.
+///   in the dithering pattern. A value of 1.0 is neutral, 0.0 produces minimal
+///   dithering, and 2.0 produces maximum contrast.
 ///
 /// # Returns
 ///
-/// A new RGB image with the dithering applied.
+/// A new [`RgbImage`] with the dithering applied.
 ///
 /// # Examples
 ///
 /// ```no_run
-/// use palettize::{apply_dithering, generate_bayer_matrix, get_preset_palette, Preset};
+/// use palettize::{apply_dithering, generate_bayer_matrix, Palette, Preset};
 ///
 /// let img = image::open("input.png").unwrap();
-/// let palette = get_preset_palette(Preset::GameBoy).unwrap();
+/// let palette = Palette::from_preset(Preset::GameBoy);
 /// let bayer = generate_bayer_matrix(2);
 ///
-/// let output = apply_dithering(&img, &palette, &bayer, 1.0);
+/// let output = apply_dithering(&img, palette.colors(), &bayer, 1.0);
 /// output.save("output.png").unwrap();
 /// ```
 pub fn apply_dithering(
     img: &DynamicImage,
-    palette: &[Rgb],
+    palette: &[Color],
     bayer_matrix: &[Vec<f32>],
     noise_intensity: f32,
 ) -> RgbImage {
@@ -178,7 +200,7 @@ pub fn apply_dithering(
                 }
             };
 
-            output.put_pixel(x, y, image::Rgb([chosen.0, chosen.1, chosen.2]));
+            output.put_pixel(x, y, image::Rgb([chosen.r, chosen.g, chosen.b]));
         }
     }
 
@@ -191,38 +213,42 @@ mod tests {
 
     #[test]
     fn test_color_distance_sq_same_color() {
-        let dist = color_distance_sq((100.0, 100.0, 100.0), (100, 100, 100));
+        let dist = color_distance_sq((100.0, 100.0, 100.0), Color::new(100, 100, 100));
         assert!(dist.abs() < f32::EPSILON);
     }
 
     #[test]
     fn test_color_distance_sq_black_to_white() {
-        let dist = color_distance_sq((0.0, 0.0, 0.0), (255, 255, 255));
+        let dist = color_distance_sq((0.0, 0.0, 0.0), Color::new(255, 255, 255));
         let expected = 255.0 * 255.0 * 3.0;
         assert!((dist - expected).abs() < 0.001);
     }
 
     #[test]
     fn test_find_two_nearest_simple() {
-        let palette = vec![(0, 0, 0), (255, 255, 255)];
+        let palette = vec![Color::new(0, 0, 0), Color::new(255, 255, 255)];
         let (nearest, second, _, _) = find_two_nearest((50.0, 50.0, 50.0), &palette);
-        assert_eq!(nearest, (0, 0, 0)); // Dark gray closer to black
-        assert_eq!(second, (255, 255, 255));
+        assert_eq!(nearest, Color::new(0, 0, 0)); // Dark gray closer to black
+        assert_eq!(second, Color::new(255, 255, 255));
     }
 
     #[test]
     fn test_find_two_nearest_bright() {
-        let palette = vec![(0, 0, 0), (255, 255, 255)];
+        let palette = vec![Color::new(0, 0, 0), Color::new(255, 255, 255)];
         let (nearest, second, _, _) = find_two_nearest((200.0, 200.0, 200.0), &palette);
-        assert_eq!(nearest, (255, 255, 255)); // Light gray closer to white
-        assert_eq!(second, (0, 0, 0));
+        assert_eq!(nearest, Color::new(255, 255, 255)); // Light gray closer to white
+        assert_eq!(second, Color::new(0, 0, 0));
     }
 
     #[test]
     fn test_find_two_nearest_exact_match() {
-        let palette = vec![(0, 0, 0), (128, 128, 128), (255, 255, 255)];
+        let palette = vec![
+            Color::new(0, 0, 0),
+            Color::new(128, 128, 128),
+            Color::new(255, 255, 255),
+        ];
         let (nearest, _, dist, _) = find_two_nearest((128.0, 128.0, 128.0), &palette);
-        assert_eq!(nearest, (128, 128, 128));
+        assert_eq!(nearest, Color::new(128, 128, 128));
         assert!(dist < 0.001);
     }
 
@@ -232,7 +258,7 @@ mod tests {
 
         // Create a small test image
         let img = DynamicImage::new_rgb8(10, 10);
-        let palette = vec![(0, 0, 0), (255, 255, 255)];
+        let palette = vec![Color::new(0, 0, 0), Color::new(255, 255, 255)];
         let bayer = crate::bayer::generate_bayer_matrix(0);
 
         let output = apply_dithering(&img, &palette, &bayer, 1.0);
@@ -253,7 +279,7 @@ mod tests {
             }
         }
 
-        let palette = vec![(0, 0, 0), (255, 255, 255)];
+        let palette = vec![Color::new(0, 0, 0), Color::new(255, 255, 255)];
         let bayer = crate::bayer::generate_bayer_matrix(0);
 
         let output = apply_dithering(&img, &palette, &bayer, 1.0);

@@ -1,12 +1,20 @@
 //! Command-line interface for the palettize image dithering tool.
+//!
+//! This binary provides a user-friendly interface to the palettize library,
+//! allowing users to apply ordered Bayer dithering to images from the command line.
+//!
+//! # Usage
+//!
+//! ```text
+//! palettize -i input.png -o output.png --preset gameboy
+//! palettize -i input.png -o output.png -p '#000000,#FFFFFF'
+//! palettize -i input.png -o output.png --palette-file colors.hex -b 3 -n 0.5
+//! ```
 
 use anyhow::{Context, Result};
 use clap::Parser;
-use palettize::{
-    Preset, Rgb, apply_dithering, generate_bayer_matrix, get_preset_palette, load_palette_file,
-    parse_hex_color,
-};
-use std::path::PathBuf;
+use palettize::{Color, Palette, Preset, dither_with_options, parse_hex_color};
+use std::path::{Path, PathBuf};
 
 /// Apply ordered Bayer dithering to images with custom color palettes.
 ///
@@ -79,6 +87,44 @@ struct Args {
     noise: f32,
 }
 
+/// Loads a palette from a file.
+///
+/// The file should contain one hex color per line. Lines starting with `//`
+/// are treated as comments and ignored. Empty lines are also ignored.
+fn load_palette_file(path: &Path) -> Result<Palette> {
+    let data = std::fs::read_to_string(path)
+        .with_context(|| format!("Failed to read palette file: {}", path.display()))?;
+
+    let mut colors: Vec<Color> = Vec::new();
+    for (line_num, line) in data.lines().enumerate() {
+        let trimmed = line.trim();
+
+        // Skip empty lines and comments
+        if trimmed.is_empty() || trimmed.starts_with("//") {
+            continue;
+        }
+
+        // Skip lines that look like comments (# followed by text, not a hex color)
+        if trimmed.starts_with('#') && trimmed.len() > 7 {
+            continue;
+        }
+
+        colors.push(parse_hex_color(trimmed).with_context(|| {
+            format!(
+                "Invalid color on line {} of {}",
+                line_num + 1,
+                path.display()
+            )
+        })?);
+    }
+
+    if colors.is_empty() {
+        anyhow::bail!("Palette file '{}' contained no colors", path.display());
+    }
+
+    Ok(Palette::new(colors))
+}
+
 fn main() -> Result<()> {
     let args = Args::parse();
 
@@ -98,21 +144,22 @@ fn main() -> Result<()> {
     }
 
     // Parse palette
-    let palette: Vec<Rgb> = if let Some(palette_str) = args.palette {
-        palette_str
+    let palette: Palette = if let Some(palette_str) = args.palette {
+        let colors = palette_str
             .split(',')
             .map(|s| parse_hex_color(s.trim()))
-            .collect::<Result<Vec<_>>>()
-            .context("Failed to parse palette colors")?
+            .collect::<Result<Vec<_>, _>>()
+            .context("Failed to parse palette colors")?;
+        Palette::new(colors)
     } else if let Some(palette_path) = args.palette_file {
         load_palette_file(&palette_path)?
     } else if let Some(preset) = args.preset {
-        get_preset_palette(preset)?
+        Palette::from_preset(preset)
     } else {
         unreachable!()
     };
 
-    if palette.is_empty() {
+    if palette.colors().is_empty() {
         anyhow::bail!("Palette cannot be empty");
     }
 
@@ -120,21 +167,19 @@ fn main() -> Result<()> {
     let img = image::open(&args.input)
         .with_context(|| format!("Failed to open input image: {}", args.input.display()))?;
 
-    // Generate Bayer matrix
-    let bayer_matrix = generate_bayer_matrix(args.bayer_level);
+    // Calculate matrix size for display
+    let matrix_size = 2_usize.pow(args.bayer_level + 1);
 
     eprintln!("Applying dithering:");
-    eprintln!("  Palette: {} colors", palette.len());
+    eprintln!("  Palette: {} colors", palette.colors().len());
     eprintln!(
         "  Bayer level: {} ({}×{} matrix)",
-        args.bayer_level,
-        bayer_matrix.len(),
-        bayer_matrix.len()
+        args.bayer_level, matrix_size, matrix_size
     );
     eprintln!("  Noise intensity: {}", args.noise);
 
     // Apply dithering
-    let output = apply_dithering(&img, &palette, &bayer_matrix, args.noise);
+    let output = dither_with_options(&img, &palette, args.bayer_level, args.noise);
 
     // Save output image
     output
