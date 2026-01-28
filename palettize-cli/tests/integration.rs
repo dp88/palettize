@@ -117,57 +117,6 @@ fn analyze_image_differences(
 }
 
 #[test]
-fn test_david_image_exact_match() {
-    // Get the manifest directory (palettize-cli directory)
-    let manifest_dir = env!("CARGO_MANIFEST_DIR");
-    let input_path = Path::new(manifest_dir).join("tests/fixtures/david-in.png");
-    let expected_path = Path::new(manifest_dir).join("tests/fixtures/david-out.png");
-
-    // Use tempfile for output
-    let output_dir = tempfile::tempdir().expect("Failed to create temp dir");
-    let output_path = output_dir.path().join("david-generated.png");
-
-    // Run palettize command via cargo run -p palettize-cli
-    let status = Command::new("cargo")
-        .args([
-            "run",
-            "-p",
-            "palettize-cli",
-            "--",
-            "-i",
-            input_path.to_str().unwrap(),
-            "-o",
-            output_path.to_str().unwrap(),
-            "-g",
-            "6",
-            "-b",
-            "2",
-            "-n",
-            "0.05",
-        ])
-        .current_dir(Path::new(manifest_dir).parent().unwrap())
-        .status()
-        .expect("Failed to execute palettize");
-
-    assert!(status.success(), "Palettize command failed");
-
-    // Analyze differences if test will fail (for debugging)
-    if let Ok(false) = compare_images_exact(&output_path, &expected_path) {
-        println!("\n=== Analyzing image differences ===");
-        let _ = analyze_image_differences(&output_path, &expected_path);
-    }
-
-    // Compare output with expected
-    let matches =
-        compare_images_exact(&output_path, &expected_path).expect("Failed to compare images");
-
-    assert!(
-        matches,
-        "Generated image does not match expected output pixel-by-pixel"
-    );
-}
-
-#[test]
 fn test_cli_help() {
     let manifest_dir = env!("CARGO_MANIFEST_DIR");
 
@@ -204,7 +153,7 @@ fn test_cli_version() {
 fn test_cli_default_palette() {
     // When no palette is specified, should default to black & white
     let manifest_dir = env!("CARGO_MANIFEST_DIR");
-    let input_path = Path::new(manifest_dir).join("tests/fixtures/david-in.png");
+    let input_path = Path::new(manifest_dir).join("tests/fixtures/gismonda.png");
 
     let output_dir = tempfile::tempdir().expect("Failed to create temp dir");
     let output_path = output_dir.path().join("default-output.png");
@@ -246,7 +195,7 @@ fn test_cli_default_palette() {
 #[test]
 fn test_custom_palette() {
     let manifest_dir = env!("CARGO_MANIFEST_DIR");
-    let input_path = Path::new(manifest_dir).join("tests/fixtures/david-in.png");
+    let input_path = Path::new(manifest_dir).join("tests/fixtures/gismonda.png");
 
     let output_dir = tempfile::tempdir().expect("Failed to create temp dir");
     let output_path = output_dir.path().join("custom-output.png");
@@ -285,5 +234,131 @@ fn test_custom_palette() {
             "Unexpected color in output: {:?}",
             color
         );
+    }
+}
+
+/// Palette configuration for regression tests
+#[derive(Clone, Copy)]
+enum Palette {
+    Bw,
+    Gray16,
+    Gray255,
+    Cga,
+    Dos,
+    Nes,
+}
+
+impl Palette {
+    fn suffix(&self) -> &'static str {
+        match self {
+            Palette::Bw => "bw",
+            Palette::Gray16 => "gray16",
+            Palette::Gray255 => "gray255",
+            Palette::Cga => "cga",
+            Palette::Dos => "dos",
+            Palette::Nes => "nes",
+        }
+    }
+
+    fn cli_args(&self, manifest_dir: &Path) -> Vec<String> {
+        match self {
+            Palette::Bw => vec![],
+            Palette::Gray16 => vec!["-g".to_string(), "16".to_string()],
+            Palette::Gray255 => vec!["-g".to_string(), "255".to_string()],
+            Palette::Cga => vec![
+                "--palette-file".to_string(),
+                manifest_dir
+                    .join("tests/fixtures/cga.hex")
+                    .to_str()
+                    .unwrap()
+                    .to_string(),
+            ],
+            Palette::Dos => vec![
+                "--palette-file".to_string(),
+                manifest_dir
+                    .join("tests/fixtures/dos.hex")
+                    .to_str()
+                    .unwrap()
+                    .to_string(),
+            ],
+            Palette::Nes => vec![
+                "--palette-file".to_string(),
+                manifest_dir
+                    .join("tests/fixtures/nes.hex")
+                    .to_str()
+                    .unwrap()
+                    .to_string(),
+            ],
+        }
+    }
+}
+
+const INPUT_IMAGES: &[&str] = &[
+    "gismonda",
+    "spring-landscape",
+    "the-departure",
+    "villa-farnese",
+];
+
+const PALETTES: &[Palette] = &[
+    Palette::Bw,
+    Palette::Gray16,
+    Palette::Gray255,
+    Palette::Cga,
+    Palette::Dos,
+    Palette::Nes,
+];
+
+#[test]
+fn test_regression_matrix() {
+    let manifest_dir = Path::new(env!("CARGO_MANIFEST_DIR"));
+    let workspace_dir = manifest_dir.parent().unwrap();
+
+    for image in INPUT_IMAGES {
+        for palette in PALETTES {
+            let input_path = manifest_dir.join(format!("tests/fixtures/{}.png", image));
+            let expected_path =
+                manifest_dir.join(format!("tests/fixtures/{}-{}.png", image, palette.suffix()));
+
+            let output_dir = tempfile::tempdir().expect("Failed to create temp dir");
+            let output_path = output_dir
+                .path()
+                .join(format!("{}-{}-generated.png", image, palette.suffix()));
+
+            let mut args = vec![
+                "run".to_string(),
+                "-p".to_string(),
+                "palettize-cli".to_string(),
+                "--".to_string(),
+                "-i".to_string(),
+                input_path.to_str().unwrap().to_string(),
+                "-o".to_string(),
+                output_path.to_str().unwrap().to_string(),
+            ];
+            args.extend(palette.cli_args(manifest_dir));
+
+            let status = Command::new("cargo")
+                .args(&args)
+                .current_dir(workspace_dir)
+                .status()
+                .expect("Failed to execute palettize");
+
+            assert!(
+                status.success(),
+                "Palettize command failed for {} with {} palette",
+                image,
+                palette.suffix()
+            );
+
+            let matches = compare_images_exact(&output_path, &expected_path)
+                .expect("Failed to compare images");
+
+            assert!(
+                matches,
+                "Generated image does not match expected output for {} with {} palette",
+                image,
+                palette.suffix()
+            );
+        }
     }
 }
