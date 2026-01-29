@@ -131,6 +131,7 @@ fn test_cli_help() {
     assert!(stdout.contains("palettize"));
     assert!(stdout.contains("--grayscale"));
     assert!(stdout.contains("--palette"));
+    assert!(stdout.contains("--auto"));
 }
 
 #[test]
@@ -235,6 +236,69 @@ fn test_custom_palette() {
             color
         );
     }
+}
+
+#[test]
+fn test_auto_extract_palette() {
+    let manifest_dir = env!("CARGO_MANIFEST_DIR");
+    let input_path = Path::new(manifest_dir).join("tests/fixtures/gismonda.png");
+
+    let output_dir = tempfile::tempdir().expect("Failed to create temp dir");
+    let output_path = output_dir.path().join("auto-output.png");
+    let hex_path = output_dir.path().join("auto-output.hex");
+
+    let status = Command::new("cargo")
+        .args([
+            "run",
+            "-p",
+            "palettize-cli",
+            "--",
+            "-i",
+            input_path.to_str().unwrap(),
+            "-o",
+            output_path.to_str().unwrap(),
+            "-a",
+            "8",
+        ])
+        .current_dir(Path::new(manifest_dir).parent().unwrap())
+        .status()
+        .expect("Failed to execute palettize");
+
+    assert!(status.success());
+    assert!(output_path.exists(), "Output image should exist");
+    assert!(hex_path.exists(), "Palette file should exist");
+
+    // Verify hex file has 8 colors
+    let hex_content = std::fs::read_to_string(&hex_path).expect("Failed to read hex file");
+    let color_count = hex_content.lines().filter(|l| !l.is_empty()).count();
+    assert_eq!(color_count, 8, "Hex file should contain 8 colors");
+
+    // Verify each line is a valid 6-character hex color
+    for line in hex_content.lines() {
+        if line.is_empty() {
+            continue;
+        }
+        assert_eq!(line.len(), 6, "Each color should be 6 hex digits");
+        assert!(
+            line.chars().all(|c| c.is_ascii_hexdigit()),
+            "Color should only contain hex digits: {}",
+            line
+        );
+    }
+
+    // Verify output image only contains exactly 8 colors
+    let img = image::open(&output_path).expect("Failed to open output");
+    let rgb = img.to_rgb8();
+    let mut unique_colors = HashSet::new();
+    for pixel in rgb.pixels() {
+        unique_colors.insert((pixel[0], pixel[1], pixel[2]));
+    }
+    assert_eq!(
+        unique_colors.len(),
+        8,
+        "Output image should contain exactly 8 colors, found {}",
+        unique_colors.len()
+    );
 }
 
 /// Palette configuration for regression tests

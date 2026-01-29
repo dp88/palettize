@@ -64,6 +64,20 @@ impl Color {
     pub const fn to_tuple(self) -> (u8, u8, u8) {
         (self.r, self.g, self.b)
     }
+
+    /// Converts the color to uppercase hex string without `#` prefix.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use palettize::Color;
+    ///
+    /// let color = Color::new(255, 0, 128);
+    /// assert_eq!(color.to_hex(), "FF0080");
+    /// ```
+    pub fn to_hex(&self) -> String {
+        format!("{:02X}{:02X}{:02X}", self.r, self.g, self.b)
+    }
 }
 
 impl From<(u8, u8, u8)> for Color {
@@ -137,6 +151,25 @@ impl Palette {
     /// ```
     pub fn colors(&self) -> &[Color] {
         &self.colors
+    }
+
+    /// Formats the palette as a hex file string (one color per line).
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use palettize::Palette;
+    ///
+    /// let palette: Palette = vec![(255, 0, 0), (0, 255, 0)].into();
+    /// assert_eq!(palette.to_hex_file(), "FF0000\n00FF00\n");
+    /// ```
+    pub fn to_hex_file(&self) -> String {
+        self.colors
+            .iter()
+            .map(|c| c.to_hex())
+            .collect::<Vec<_>>()
+            .join("\n")
+            + "\n"
     }
 }
 
@@ -369,5 +402,27 @@ mod tests {
     #[test]
     fn test_parse_hex_invalid_chars() {
         assert!(parse_hex_color("#GGGGGG").is_err());
+    }
+
+    #[test]
+    fn test_color_to_hex() {
+        assert_eq!(Color::new(255, 0, 0).to_hex(), "FF0000");
+        assert_eq!(Color::new(0, 255, 0).to_hex(), "00FF00");
+        assert_eq!(Color::new(0, 0, 255).to_hex(), "0000FF");
+        assert_eq!(Color::new(255, 0, 128).to_hex(), "FF0080");
+        assert_eq!(Color::new(0, 0, 0).to_hex(), "000000");
+        assert_eq!(Color::new(255, 255, 255).to_hex(), "FFFFFF");
+    }
+
+    #[test]
+    fn test_palette_to_hex_file() {
+        let palette: Palette = vec![(255, 0, 0), (0, 255, 0), (0, 0, 255)].into();
+        assert_eq!(palette.to_hex_file(), "FF0000\n00FF00\n0000FF\n");
+    }
+
+    #[test]
+    fn test_palette_to_hex_file_single_color() {
+        let palette: Palette = vec![(128, 64, 32)].into();
+        assert_eq!(palette.to_hex_file(), "804020\n");
     }
 }

@@ -96,6 +96,7 @@
 
 pub mod bayer;
 pub mod dither;
+pub mod extract;
 pub mod palette;
 
 use image::{DynamicImage, RgbImage};
@@ -103,6 +104,7 @@ use image::{DynamicImage, RgbImage};
 // Re-export main types and functions for convenience
 pub use bayer::generate_bayer_matrix;
 pub use dither::{apply_dithering, color_distance_sq, find_two_nearest};
+pub use extract::{extract_palette_kmeans, extract_palette_median_cut};
 pub use palette::{Color, Palette, ParseColorError, grayscale, parse_hex_color};
 
 /// Default Bayer matrix level used by [`dither()`].
