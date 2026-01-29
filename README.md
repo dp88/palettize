@@ -110,9 +110,9 @@ palettize -i photo.png -o bold.png -g 6 -b 1 -n 1.5
 ## Example/Test Images
 The example images used for testing palettize are in the public domain.
 
-### 🇫🇷 Gismonda (1919) by Georges Antoine Rochegrosse
+### 🇳🇱 A View of the Bay of Santa Margherita (Genoa), Liguria, Italy by Pieter Francis Peters
 
-Rochegrosse (1859-1938) was a French academic painter known for dramatic historical and mythological scenes. He won the prestigious Prix de Rome in 1882 and became a prominent figure in the Parisian art world, illustrating works by Flaubert and Baudelaire. His later career shifted toward Orientalist subjects following travels to Algeria.
+Peters (1818-1903) was a Dutch landscape painter known for his luminous Mediterranean coastal scenes and Alpine views. He traveled extensively through Italy, Switzerland, and Germany, capturing picturesque harbors and mountain landscapes with warm, atmospheric light. His works reflect the Romantic tradition of idealized nature while maintaining careful attention to topographical accuracy.
 
 ### 🇫🇷 Villa Farnese With Gardens At Caprarola (1764) by Hubert Robert
 
