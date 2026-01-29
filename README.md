@@ -1,8 +1,6 @@
-# palettize
+![palettize banner](art/banner.png)
 
-A command-line utility for applying ordered Bayer dithering to images with custom color palettes.
-
-Palettize converts full-color images to a limited color palette using ordered dithering, creating the characteristic cross-hatch patterns seen in classic video games and pixel art.
+Palettize is a command-line utility for applying ordered Bayer dithering to images with custom color palettes. It converts full-color images to a limited color palette using ordered dithering, creating the characteristic cross-hatch patterns seen in classic video games and pixel art.
 
 ## Installation
 
@@ -36,6 +34,8 @@ palettize -i <INPUT> -o <OUTPUT> [OPTIONS]
 | `-p, --palette <COLORS>` | Comma-separated hex colors (e.g., `#000000,#FFFFFF`) |
 | `--palette-file <FILE>` | Path to a palette file (one hex color per line) |
 | `-g, --grayscale <N>` | Generate grayscale palette with N colors (2-255) |
+| `-a, --auto <N>` | Auto-extract N colors from input image |
+| `--auto-method <METHOD>` | Extraction algorithm: `median-cut` (default) or `kmeans` |
 | `-b, --bayer-level <N>` | Bayer matrix level 0-5 (default: 2) |
 | `-n, --noise <STRENGTH>` | Dither strength 0.0-2.0 (default: 1.0) |
 
@@ -97,6 +97,18 @@ Then run:
 palettize -i photo.png -o output.png --palette-file my-palette.hex
 ```
 
+### Auto-extracting a palette
+
+```bash
+# Extract 8 colors from the image using median cut (default)
+palettize -i photo.png -o output.png -a 8
+
+# Use k-means clustering instead
+palettize -i photo.png -o output.png -a 8 --auto-method kmeans
+```
+
+This also saves the extracted palette to a `.hex` file alongside the output.
+
 ### Adjusting dither parameters
 
 ```bash
@@ -106,6 +118,10 @@ palettize -i photo.png -o subtle.png -g 6 -b 3 -n 0.5
 # Coarser pattern with increased contrast
 palettize -i photo.png -o bold.png -g 6 -b 1 -n 1.5
 ```
+
+## A Note on the Code
+
+I'm not a Rust expert. This project was mostly vibe-coded, first with Codex and later with Claude. I needed a dithering utility for a completely unrelated personal project, so I decided to write one that met my needs and worked on the CLI with minimal fuss.
 
 ## Example/Test Images
 The example images used for testing palettize are in the public domain.
