@@ -1,143 +1,59 @@
 ![palettize banner](art/banner.png)
 
-Palettize is a command-line utility for applying ordered Bayer dithering to images with custom color palettes. It converts full-color images to a limited color palette using ordered dithering, creating the characteristic cross-hatch patterns seen in classic video games and pixel art.
+# palettize
 
-## Installation
+[![CI](https://github.com/dp88/palettize/actions/workflows/ci.yml/badge.svg)](https://github.com/dp88/palettize/actions/workflows/ci.yml)
+[![crates.io](https://img.shields.io/crates/v/palettize-cli.svg)](https://crates.io/crates/palettize-cli)
+[![docs.rs](https://img.shields.io/docsrs/palettize)](https://docs.rs/palettize)
+[![MSRV](https://img.shields.io/badge/MSRV-1.85-orange)](https://blog.rust-lang.org/2025/02/20/Rust-1.85.0/)
+[![License](https://img.shields.io/badge/license-MIT%20OR%20Apache--2.0-blue)](#license)
 
-### From source
+`palettize` turns full-color images into ordered Bayer-dithered images with a palette you choose.
 
-```bash
-git clone https://github.com/dp88/palettize.git
-cd palettize
-cargo install --path .
+## Quick start
+
+Install the command-line tool:
+
+```sh
+cargo install palettize-cli
 ```
 
-### Build without installing
+Then dither an image with the default black-and-white palette:
 
-```bash
-cargo build --release
-# Binary will be at target/release/palettize
+```sh
+palettize --input photo.png --output photo-dithered.png
 ```
 
-## Usage
+To work from a checkout instead, run:
 
-```bash
-palettize -i <INPUT> -o <OUTPUT> [OPTIONS]
+```sh
+cargo install --path crates/palettize-cli
 ```
 
-### Options
+Use `palettize --help` to see every option.
 
-| Option | Description |
-|--------|-------------|
-| `-i, --input <FILE>` | Input image path (PNG, JPEG, GIF, BMP, etc.) |
-| `-o, --output <FILE>` | Output image path |
-| `-p, --palette <COLORS>` | Comma-separated hex colors (e.g., `#000000,#FFFFFF`) |
-| `--palette-file <FILE>` | Path to a palette file (one hex color per line) |
-| `-g, --grayscale <N>` | Generate grayscale palette with N colors (2-255) |
-| `-a, --auto <N>` | Auto-extract N colors from input image |
-| `--auto-method <METHOD>` | Extraction algorithm: `median-cut` (default) or `kmeans` |
-| `-b, --bayer-level <N>` | Bayer matrix level 0-5 (default: 2) |
-| `-n, --noise <STRENGTH>` | Dither strength 0.0-2.0 (default: 1.0) |
+## Capabilities
 
-### Bayer Matrix Levels
+- Use a grayscale palette, comma-separated colors, or a palette file.
+- Extract a palette with median cut or k-means++ clustering.
+- Control Bayer matrix size and dither strength.
+- Use the reusable [`palettize`](https://crates.io/crates/palettize) library in Rust applications.
 
-The `--bayer-level` option controls the dithering pattern size:
+## Documentation
 
-| Level | Matrix Size | Effect |
-|-------|-------------|--------|
-| 0 | 2×2 | Very coarse, visible pattern |
-| 1 | 4×4 | Coarse dithering |
-| 2 | 8×8 | Balanced (default) |
-| 3 | 16×16 | Fine dithering |
-| 4 | 32×32 | Very fine |
-| 5 | 64×64 | Extremely fine, subtle pattern |
+- [Library API on docs.rs](https://docs.rs/palettize)
+- [Library package guide](crates/palettize/README.md)
+- [CLI package guide](crates/palettize-cli/README.md)
+- [Changelog](CHANGELOG.md)
+- [Release guide](RELEASING.md)
 
-## Examples
+## Requirements
 
-### Using grayscale palettes
+Building from source requires Rust 1.85 or later.
 
-```bash
-# Convert to black and white (default)
-palettize -i photo.png -o bw.png
+## License
 
-# 6-level grayscale
-palettize -i photo.png -o gray6.png -g 6
+Licensed under either of [MIT](LICENSE-MIT) or [Apache-2.0](LICENSE-APACHE), at your option.
 
-# 16-level grayscale
-palettize -i photo.png -o gray16.png -g 16
-```
-
-### Using custom colors
-
-```bash
-# Sepia tone
-palettize -i photo.png -o sepia.png -p "#2E1E0F,#6B4423,#C4A35A,#F5DEB3"
-
-# Cyberpunk palette
-palettize -i photo.png -o cyber.png -p "#0D0221,#0F084B,#26408B,#A6CFD5,#C2E7D9"
-```
-
-### Using a palette file
-
-Create a file `my-palette.hex`:
-```
-// My custom palette
-#1a1c2c
-#5d275d
-#b13e53
-#ef7d57
-#ffcd75
-#a7f070
-#38b764
-#257179
-```
-
-Then run:
-```bash
-palettize -i photo.png -o output.png --palette-file my-palette.hex
-```
-
-### Auto-extracting a palette
-
-```bash
-# Extract 8 colors from the image using median cut (default)
-palettize -i photo.png -o output.png -a 8
-
-# Use k-means clustering instead
-palettize -i photo.png -o output.png -a 8 --auto-method kmeans
-```
-
-This also saves the extracted palette to a `.hex` file alongside the output.
-
-### Adjusting dither parameters
-
-```bash
-# Finer dithering pattern with reduced contrast
-palettize -i photo.png -o subtle.png -g 6 -b 3 -n 0.5
-
-# Coarser pattern with increased contrast
-palettize -i photo.png -o bold.png -g 6 -b 1 -n 1.5
-```
-
-## A Note on the Code
-
-I'm not a Rust expert. This project was mostly vibe-coded, first with Codex and later with Claude. I needed a dithering utility for a completely unrelated personal project, so I decided to write one that met my needs and worked on the CLI with minimal fuss.
-
-## Example/Test Images
-The example images used for testing palettize are in the public domain.
-
-### 🇳🇱 A View of the Bay of Santa Margherita (Genoa), Liguria, Italy by Pieter Francis Peters
-
-Peters (1818-1903) was a Dutch landscape painter known for his luminous Mediterranean coastal scenes and Alpine views. He traveled extensively through Italy, Switzerland, and Germany, capturing picturesque harbors and mountain landscapes with warm, atmospheric light. His works reflect the Romantic tradition of idealized nature while maintaining careful attention to topographical accuracy.
-
-### 🇫🇷 Villa Farnese With Gardens At Caprarola (1764) by Hubert Robert
-
-Robert (1733-1808) was a French painter celebrated for his romantic depictions of ruins and garden landscapes, earning him the nickname "Robert des Ruines." He spent eleven years in Rome where he developed his signature style of architectural capriccios and picturesque decay. After the French Revolution, he was briefly imprisoned but survived to become one of the first curators of the Louvre.
-
-### 🇺🇸 The Departure (1837) by Thomas Cole
-
-Cole (1801-1848) was an English-born American painter who founded the Hudson River School, the first major American art movement. His allegorical series "The Course of Empire" and "The Voyage of Life" established landscape painting as a vehicle for moral and philosophical themes. He championed the American wilderness as a subject worthy of high art during a period of rapid westward expansion.
-
-### 🇩🇰 Spring Landscape (1893) by Peder Mørk Mønsted
-
-Mønsted (1859-1941) was a Danish realist painter renowned for his luminous landscapes and meticulous attention to natural light. He traveled extensively throughout Europe and North Africa, painting en plein air with remarkable precision. His works are characterized by their photographic clarity and masterful depiction of water, foliage, and atmospheric conditions.
+Banner: *A View of the Bay of Santa Margherita* by Pieter Francis Peters,
+public domain. Full artwork and test-image credits are in [art/CREDITS.md](art/CREDITS.md).

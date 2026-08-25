@@ -379,18 +379,27 @@ mod tests {
     fn test_parse_hex_without_hash() {
         assert_eq!(parse_hex_color("FF0000").unwrap(), Color::new(255, 0, 0));
         assert_eq!(parse_hex_color("000000").unwrap(), Color::new(0, 0, 0));
-        assert_eq!(parse_hex_color("FFFFFF").unwrap(), Color::new(255, 255, 255));
+        assert_eq!(
+            parse_hex_color("FFFFFF").unwrap(),
+            Color::new(255, 255, 255)
+        );
     }
 
     #[test]
     fn test_parse_hex_with_whitespace() {
-        assert_eq!(parse_hex_color("  #FF0000  ").unwrap(), Color::new(255, 0, 0));
+        assert_eq!(
+            parse_hex_color("  #FF0000  ").unwrap(),
+            Color::new(255, 0, 0)
+        );
     }
 
     #[test]
     fn test_parse_hex_lowercase() {
         assert_eq!(parse_hex_color("#ff0000").unwrap(), Color::new(255, 0, 0));
-        assert_eq!(parse_hex_color("#aabbcc").unwrap(), Color::new(170, 187, 204));
+        assert_eq!(
+            parse_hex_color("#aabbcc").unwrap(),
+            Color::new(170, 187, 204)
+        );
     }
 
     #[test]

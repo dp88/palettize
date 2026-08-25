@@ -1,22 +1,29 @@
 [package]
 name = "palettize-cli"
-version = "0.2.0"
-edition = "2024"
+version.workspace = true
+authors.workspace = true
+edition.workspace = true
+rust-version.workspace = true
 description = "CLI for applying ordered Bayer dithering to images with custom color palettes"
-license = "MIT"
-repository = "https://github.com/dp88/palettize"
+license.workspace = true
+repository.workspace = true
 keywords = ["dithering", "image", "bayer", "palette", "cli"]
 categories = ["command-line-utilities", "multimedia::images"]
+readme = "README.md"
+exclude = ["tests/fixtures/*.png"]
+
+[lints]
+workspace = true
 
 [[bin]]
 name = "palettize"
 path = "src/main.rs"
 
 [dependencies]
-palettize = { path = "../palettize" }
 anyhow = "1.0"
 clap = { version = "4.5", features = ["derive"] }
-image = "0.25"
+image.workspace = true
+palettize = { path = "../palettize", version = "0.2.0" }
 
 [dev-dependencies]
 tempfile = "3"

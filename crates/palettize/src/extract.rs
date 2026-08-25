@@ -207,7 +207,11 @@ impl ColorBox {
         }
 
         let (r_sum, g_sum, b_sum) = self.pixels.iter().fold((0u64, 0u64, 0u64), |acc, p| {
-            (acc.0 + p[0] as u64, acc.1 + p[1] as u64, acc.2 + p[2] as u64)
+            (
+                acc.0 + p[0] as u64,
+                acc.1 + p[1] as u64,
+                acc.2 + p[2] as u64,
+            )
         });
 
         let count = self.pixels.len() as u64;
@@ -353,7 +357,7 @@ fn update_centroids(pixels: &[[f64; 3]], assignments: &[usize], k: usize) -> Vec
     }
 
     sums.into_iter()
-        .zip(counts.into_iter())
+        .zip(counts)
         .map(|(sum, count)| {
             if count > 0 {
                 [
@@ -413,9 +417,7 @@ mod tests {
 
         let colors: Vec<_> = palette.colors().iter().collect();
         let has_black = colors.iter().any(|c| c.r < 10 && c.g < 10 && c.b < 10);
-        let has_white = colors
-            .iter()
-            .any(|c| c.r > 245 && c.g > 245 && c.b > 245);
+        let has_white = colors.iter().any(|c| c.r > 245 && c.g > 245 && c.b > 245);
         assert!(has_black, "Should find black");
         assert!(has_white, "Should find white");
     }
@@ -466,9 +468,7 @@ mod tests {
 
         let colors: Vec<_> = palette.colors().iter().collect();
         let has_black = colors.iter().any(|c| c.r < 10 && c.g < 10 && c.b < 10);
-        let has_white = colors
-            .iter()
-            .any(|c| c.r > 245 && c.g > 245 && c.b > 245);
+        let has_white = colors.iter().any(|c| c.r > 245 && c.g > 245 && c.b > 245);
         assert!(has_black, "Should find black");
         assert!(has_white, "Should find white");
     }

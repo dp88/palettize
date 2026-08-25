@@ -118,11 +118,8 @@ fn analyze_image_differences(
 
 #[test]
 fn test_cli_help() {
-    let manifest_dir = env!("CARGO_MANIFEST_DIR");
-
-    let output = Command::new("cargo")
-        .args(["run", "-p", "palettize-cli", "--", "--help"])
-        .current_dir(Path::new(manifest_dir).parent().unwrap())
+    let output = Command::new(env!("CARGO_BIN_EXE_palettize"))
+        .arg("--help")
         .output()
         .expect("Failed to execute palettize --help");
 
@@ -136,11 +133,8 @@ fn test_cli_help() {
 
 #[test]
 fn test_cli_version() {
-    let manifest_dir = env!("CARGO_MANIFEST_DIR");
-
-    let output = Command::new("cargo")
-        .args(["run", "-p", "palettize-cli", "--", "--version"])
-        .current_dir(Path::new(manifest_dir).parent().unwrap())
+    let output = Command::new(env!("CARGO_BIN_EXE_palettize"))
+        .arg("--version")
         .output()
         .expect("Failed to execute palettize --version");
 
@@ -159,18 +153,13 @@ fn test_cli_default_palette() {
     let output_dir = tempfile::tempdir().expect("Failed to create temp dir");
     let output_path = output_dir.path().join("default-output.png");
 
-    let status = Command::new("cargo")
+    let status = Command::new(env!("CARGO_BIN_EXE_palettize"))
         .args([
-            "run",
-            "-p",
-            "palettize-cli",
-            "--",
             "-i",
             input_path.to_str().unwrap(),
             "-o",
             output_path.to_str().unwrap(),
         ])
-        .current_dir(Path::new(manifest_dir).parent().unwrap())
         .status()
         .expect("Failed to execute palettize");
 
@@ -201,12 +190,8 @@ fn test_custom_palette() {
     let output_dir = tempfile::tempdir().expect("Failed to create temp dir");
     let output_path = output_dir.path().join("custom-output.png");
 
-    let status = Command::new("cargo")
+    let status = Command::new(env!("CARGO_BIN_EXE_palettize"))
         .args([
-            "run",
-            "-p",
-            "palettize-cli",
-            "--",
             "-i",
             input_path.to_str().unwrap(),
             "-o",
@@ -214,7 +199,6 @@ fn test_custom_palette() {
             "-p",
             "#FF0000,#00FF00,#0000FF",
         ])
-        .current_dir(Path::new(manifest_dir).parent().unwrap())
         .status()
         .expect("Failed to execute palettize");
 
@@ -247,12 +231,8 @@ fn test_auto_extract_palette() {
     let output_path = output_dir.path().join("auto-output.png");
     let hex_path = output_dir.path().join("auto-output.hex");
 
-    let status = Command::new("cargo")
+    let status = Command::new(env!("CARGO_BIN_EXE_palettize"))
         .args([
-            "run",
-            "-p",
-            "palettize-cli",
-            "--",
             "-i",
             input_path.to_str().unwrap(),
             "-o",
@@ -260,7 +240,6 @@ fn test_auto_extract_palette() {
             "-a",
             "8",
         ])
-        .current_dir(Path::new(manifest_dir).parent().unwrap())
         .status()
         .expect("Failed to execute palettize");
 
@@ -376,7 +355,6 @@ const PALETTES: &[Palette] = &[
 #[test]
 fn test_regression_matrix() {
     let manifest_dir = Path::new(env!("CARGO_MANIFEST_DIR"));
-    let workspace_dir = manifest_dir.parent().unwrap();
 
     for image in INPUT_IMAGES {
         for palette in PALETTES {
@@ -385,15 +363,12 @@ fn test_regression_matrix() {
                 manifest_dir.join(format!("tests/fixtures/{}-{}.png", image, palette.suffix()));
 
             let output_dir = tempfile::tempdir().expect("Failed to create temp dir");
-            let output_path = output_dir
-                .path()
-                .join(format!("{}-{}-generated.png", image, palette.suffix()));
+            let output_path =
+                output_dir
+                    .path()
+                    .join(format!("{}-{}-generated.png", image, palette.suffix()));
 
             let mut args = vec![
-                "run".to_string(),
-                "-p".to_string(),
-                "palettize-cli".to_string(),
-                "--".to_string(),
                 "-i".to_string(),
                 input_path.to_str().unwrap().to_string(),
                 "-o".to_string(),
@@ -401,9 +376,8 @@ fn test_regression_matrix() {
             ];
             args.extend(palette.cli_args(manifest_dir));
 
-            let status = Command::new("cargo")
+            let status = Command::new(env!("CARGO_BIN_EXE_palettize"))
                 .args(&args)
-                .current_dir(workspace_dir)
                 .status()
                 .expect("Failed to execute palettize");
 

@@ -1,3 +1,19 @@
 [workspace]
-members = ["palettize", "palettize-cli"]
-resolver = "2"
+members = ["crates/palettize", "crates/palettize-cli"]
+resolver = "3"
+
+[workspace.package]
+authors = ["David Palmer"]
+edition = "2024"
+license = "MIT OR Apache-2.0"
+repository = "https://github.com/dp88/palettize"
+rust-version = "1.85"
+version = "0.2.0"
+
+[workspace.dependencies]
+# Version 0.25.9 selects a JPEG decoder that does not compile on Rust 1.85 on
+# AArch64. Keep the newest 0.25 release that preserves the declared MSRV.
+image = "=0.25.8"
+
+[workspace.lints.rust]
+missing_docs = "warn"

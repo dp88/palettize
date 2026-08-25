@@ -1,12 +1,18 @@
 [package]
 name = "palettize"
-version = "0.2.0"
-edition = "2024"
+version.workspace = true
+authors.workspace = true
+edition.workspace = true
+rust-version.workspace = true
 description = "Library for applying ordered Bayer dithering to images with custom color palettes"
-license = "MIT"
-repository = "https://github.com/dp88/palettize"
+license.workspace = true
+repository.workspace = true
 keywords = ["dithering", "image", "bayer", "palette"]
 categories = ["multimedia::images"]
+readme = "README.md"
+
+[lints]
+workspace = true
 
 [dependencies]
-image = "0.25"
+image.workspace = true

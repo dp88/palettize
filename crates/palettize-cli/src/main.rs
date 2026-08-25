@@ -100,7 +100,12 @@ struct Args {
     /// Only valid when --auto is specified.
     ///   median-cut: Fast, good perceptual results (default)
     ///   kmeans: K-means++ clustering, slower but may find better clusters
-    #[arg(long, default_value = "median-cut", value_name = "METHOD", requires = "auto")]
+    #[arg(
+        long,
+        default_value = "median-cut",
+        value_name = "METHOD",
+        requires = "auto"
+    )]
     auto_method: AutoMethod,
 
     /// Bayer matrix level (0-5).

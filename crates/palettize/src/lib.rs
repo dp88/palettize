@@ -94,6 +94,11 @@
 //! Higher levels produce smoother gradients but larger repeating patterns.
 //! Level 2 (8×8) is a good default for most images.
 
+/// The package README is compiled as part of the test suite.
+#[cfg(doctest)]
+#[doc = include_str!("../README.md")]
+struct ReadmeDoctests;
+
 pub mod bayer;
 pub mod dither;
 pub mod extract;

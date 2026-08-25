@@ -136,7 +136,7 @@ mod tests {
         let matrix = generate_bayer_matrix(2);
         for row in &matrix {
             for &value in row {
-                assert!(value >= 0.0 && value < 1.0);
+                assert!((0.0..1.0).contains(&value));
             }
         }
     }
