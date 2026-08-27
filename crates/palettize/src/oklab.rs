@@ -175,4 +175,50 @@ mod tests {
         assert!(chroma(red) > 0.15, "red chroma is {}", chroma(red));
         assert!(chroma(grey) < 1e-3, "grey chroma is {}", chroma(grey));
     }
+
+    #[test]
+    fn test_matches_published_reference_values() {
+        // Reference Oklab values for the sRGB primaries, from the CSS Color 4
+        // specification. A round trip cannot catch a wrong matrix pair, because
+        // a consistent pair of wrong matrices round trips perfectly. These
+        // values pin the constants to the real color space.
+        let cases = [
+            ((255u8, 0u8, 0u8), (0.627_955, 0.224_863, 0.125_846)),
+            ((0, 255, 0), (0.866_440, -0.233_888, 0.179_498)),
+            ((0, 0, 255), (0.452_014, -0.032_457, -0.311_528)),
+            ((255, 255, 255), (1.0, 0.0, 0.0)),
+            ((0, 0, 0), (0.0, 0.0, 0.0)),
+        ];
+
+        for ((r, g, b), (l, a, bb)) in cases {
+            let got = srgb_to_oklab(r, g, b);
+            assert!(
+                (got.l - l).abs() < 1e-3 && (got.a - a).abs() < 1e-3 && (got.b - bb).abs() < 1e-3,
+                "({}, {}, {}) gave L {} a {} b {}, expected L {} a {} b {}",
+                r,
+                g,
+                b,
+                got.l,
+                got.a,
+                got.b,
+                l,
+                a,
+                bb
+            );
+        }
+    }
+
+    #[test]
+    fn test_greys_have_no_chroma() {
+        for v in [0u8, 32, 64, 128, 192, 255] {
+            let lab = srgb_to_oklab(v, v, v);
+            assert!(
+                lab.a.abs() < 1e-4 && lab.b.abs() < 1e-4,
+                "grey {} has a {} b {}",
+                v,
+                lab.a,
+                lab.b
+            );
+        }
+    }
 }
