@@ -10,7 +10,7 @@ repository.workspace = true
 keywords = ["dithering", "image", "bayer", "palette", "cli"]
 categories = ["command-line-utilities", "multimedia::images"]
 readme = "README.md"
-exclude = ["tests/fixtures/*.png"]
+exclude = ["tests/"]
 
 [lints]
 workspace = true
