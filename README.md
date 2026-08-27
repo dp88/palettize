@@ -40,6 +40,26 @@ Use `palettize --help` to see every option.
 - Control Bayer matrix size and dither strength.
 - Use the reusable [`palettize`](https://crates.io/crates/palettize) library in Rust applications.
 
+## Tuning the remap
+
+`--remap` matches the image's color distribution to the palette before
+dithering. Its strength value trades the image's own tone against the palette's
+range. A higher value is not always better.
+
+| Strength | Result |
+| --- | --- |
+| `0.3`-`0.5` | Keeps the image's own tone and opens up the shadows. Use this for dark or low-key images. |
+| `1.0` | Matches the palette's tonal range in full. Use this for washed-out images, or when the image's colors sit far from the palette. |
+
+The flag defaults to `1.0`. At that strength the remap reproduces the palette's
+tonal distribution exactly. Most palettes spread their colors evenly across the
+range, so a deliberately dark image becomes much brighter. Lower the strength to
+keep the original mood:
+
+```sh
+palettize -i photo.png -o output.png --palette-file colors.hex --remap 0.5
+```
+
 ## Documentation
 
 - [Library API on docs.rs](https://docs.rs/palettize)
