@@ -18,7 +18,7 @@ From a checkout:
 cargo install --path crates/palettize-cli
 ```
 
-Run `palettize --help` for palette, extraction, Bayer-matrix, and dither-strength options.
+Run `palettize --help` for palette, extraction, remap, Bayer-matrix, and dither-strength options.
 
 ## Requirements
 

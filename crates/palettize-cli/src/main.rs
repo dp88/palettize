@@ -10,14 +10,16 @@
 //! palettize -i input.png -o output.png -g 6
 //! palettize -i input.png -o output.png -p '#000000,#FFFFFF'
 //! palettize -i input.png -o output.png --palette-file colors.hex -b 3 -n 0.5
+//! palettize -i input.png -o output.png --palette-file colors.hex --remap 0.7
 //! ```
 
 use anyhow::{Context, Result};
 use clap::Parser;
 use clap::ValueEnum;
+use image::DynamicImage;
 use palettize::{
     Color, Palette, dither_with_options, extract_palette_kmeans, extract_palette_median_cut,
-    grayscale, parse_hex_color,
+    grayscale, parse_hex_color, remap_to_palette,
 };
 use std::path::{Path, PathBuf};
 
@@ -59,6 +61,9 @@ EXAMPLES:
 
     # Adjust dithering parameters
     palettize -i photo.png -o output.png -g 2 -b 3 -n 0.5
+
+    # Match the image's colors to the palette before dithering
+    palettize -i photo.png -o output.png --palette-file colors.hex --remap
 ")]
 struct Args {
     /// Input image path (supports PNG, JPEG, GIF, BMP, etc.)
@@ -123,6 +128,18 @@ struct Args {
     /// Default is 1.0.
     #[arg(short, long, default_value = "1.0", value_name = "STRENGTH")]
     noise: f32,
+
+    /// Match the image's color distribution to the palette before dithering (0.0-1.0).
+    ///
+    /// The value is optional and defaults to 1.0. Use this when the image's
+    /// colors sit far from the palette, or the image looks washed-out.
+    #[arg(
+        long,
+        num_args = 0..=1,
+        default_missing_value = "1.0",
+        value_name = "STRENGTH"
+    )]
+    remap: Option<f32>,
 }
 
 /// Loads a palette from a file.
@@ -170,6 +187,11 @@ fn main() -> Result<()> {
     if args.noise < 0.0 || args.noise > 2.0 {
         anyhow::bail!("Dither strength (--noise) must be between 0.0 and 2.0");
     }
+    if let Some(strength) = args.remap {
+        if !(0.0..=1.0).contains(&strength) {
+            anyhow::bail!("Remap strength (--remap) must be between 0.0 and 1.0");
+        }
+    }
 
     // Load input image
     let img = image::open(&args.input)
@@ -206,6 +228,13 @@ fn main() -> Result<()> {
         anyhow::bail!("Palette cannot be empty");
     }
 
+    // Remap the image's color distribution to the palette before dithering
+    let img = if let Some(strength) = args.remap {
+        DynamicImage::ImageRgb8(remap_to_palette(&img, &palette, strength))
+    } else {
+        img
+    };
+
     // Calculate matrix size for display
     let matrix_size = 2_usize.pow(args.bayer_level + 1);
 
@@ -216,6 +245,9 @@ fn main() -> Result<()> {
         args.bayer_level, matrix_size, matrix_size
     );
     eprintln!("  Noise intensity: {}", args.noise);
+    if let Some(strength) = args.remap {
+        eprintln!("  Remap strength: {}", strength);
+    }
 
     // Apply dithering
     let output = dither_with_options(&img, &palette, args.bayer_level, args.noise);

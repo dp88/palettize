@@ -36,6 +36,7 @@ Use `palettize --help` to see every option.
 
 - Use a grayscale palette, comma-separated colors, or a palette file.
 - Extract a palette with median cut or k-means++ clustering.
+- Match the image's color distribution to the palette before dithering with `--remap`.
 - Control Bayer matrix size and dither strength.
 - Use the reusable [`palettize`](https://crates.io/crates/palettize) library in Rust applications.
 

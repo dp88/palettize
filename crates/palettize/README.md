@@ -31,6 +31,7 @@ output.save("photo-dithered.png")?;
 - Generate Bayer matrices from 2×2 through 64×64.
 - Build palettes from RGB colors, hex values, or grayscale stops.
 - Extract palettes with median cut or k-means++ clustering.
+- Remap an image's color distribution onto a palette's distribution in Oklab before dithering.
 
 ## Documentation
 

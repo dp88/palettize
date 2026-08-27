@@ -116,6 +116,24 @@ fn analyze_image_differences(
     Ok(())
 }
 
+/// Parse a palette hex file into a set of RGB colors.
+///
+/// Skips empty lines and lines starting with `//`, matching the CLI's own
+/// palette-file parser.
+fn parse_hex_palette(path: &Path) -> HashSet<(u8, u8, u8)> {
+    let data = std::fs::read_to_string(path).expect("Failed to read palette file");
+    data.lines()
+        .map(str::trim)
+        .filter(|line| !line.is_empty() && !line.starts_with("//"))
+        .map(|hex| {
+            let r = u8::from_str_radix(&hex[0..2], 16).expect("Invalid hex color");
+            let g = u8::from_str_radix(&hex[2..4], 16).expect("Invalid hex color");
+            let b = u8::from_str_radix(&hex[4..6], 16).expect("Invalid hex color");
+            (r, g, b)
+        })
+        .collect()
+}
+
 #[test]
 fn test_cli_help() {
     let output = Command::new(env!("CARGO_BIN_EXE_palettize"))
@@ -399,4 +417,87 @@ fn test_regression_matrix() {
             );
         }
     }
+}
+
+#[test]
+fn test_remap_flag() {
+    let manifest_dir = Path::new(env!("CARGO_MANIFEST_DIR"));
+    let input_path = manifest_dir.join("tests/fixtures/gismonda.png");
+    let palette_path = manifest_dir.join("tests/fixtures/dos.hex");
+
+    let output_dir = tempfile::tempdir().expect("Failed to create temp dir");
+    let remap_output_path = output_dir.path().join("remap-output.png");
+    let plain_output_path = output_dir.path().join("no-remap-output.png");
+
+    let status = Command::new(env!("CARGO_BIN_EXE_palettize"))
+        .args([
+            "-i",
+            input_path.to_str().unwrap(),
+            "-o",
+            remap_output_path.to_str().unwrap(),
+            "--palette-file",
+            palette_path.to_str().unwrap(),
+            "--remap",
+        ])
+        .status()
+        .expect("Failed to execute palettize");
+
+    assert!(status.success());
+    assert!(remap_output_path.exists());
+
+    let status = Command::new(env!("CARGO_BIN_EXE_palettize"))
+        .args([
+            "-i",
+            input_path.to_str().unwrap(),
+            "-o",
+            plain_output_path.to_str().unwrap(),
+            "--palette-file",
+            palette_path.to_str().unwrap(),
+        ])
+        .status()
+        .expect("Failed to execute palettize");
+
+    assert!(status.success());
+    assert!(plain_output_path.exists());
+
+    // Every output pixel is a palette color
+    let palette_colors = parse_hex_palette(&palette_path);
+    let img = image::open(&remap_output_path).expect("Failed to open output");
+    let rgb = img.to_rgb8();
+    for pixel in rgb.pixels() {
+        let color = (pixel[0], pixel[1], pixel[2]);
+        assert!(
+            palette_colors.contains(&color),
+            "Unexpected color in output: {:?}",
+            color
+        );
+    }
+
+    // The flag changes the output
+    let matches = compare_images_exact(&remap_output_path, &plain_output_path)
+        .expect("Failed to compare images");
+    assert!(!matches, "--remap should change the output");
+}
+
+#[test]
+fn test_remap_strength_out_of_range() {
+    let manifest_dir = Path::new(env!("CARGO_MANIFEST_DIR"));
+    let input_path = manifest_dir.join("tests/fixtures/gismonda.png");
+
+    let output_dir = tempfile::tempdir().expect("Failed to create temp dir");
+    let output_path = output_dir.path().join("remap-out-of-range-output.png");
+
+    let status = Command::new(env!("CARGO_BIN_EXE_palettize"))
+        .args([
+            "-i",
+            input_path.to_str().unwrap(),
+            "-o",
+            output_path.to_str().unwrap(),
+            "--remap",
+            "1.5",
+        ])
+        .status()
+        .expect("Failed to execute palettize");
+
+    assert!(!status.success());
 }
