@@ -78,6 +78,32 @@
 //! - `grayscale(6)` - 6-level grayscale
 //! - `grayscale(256)` - Full 8-bit grayscale
 //!
+//! ## Palette Remapping
+//!
+//! By default, dithering picks the palette color nearest to each pixel. That is
+//! a colorimetric match. [`remap_to_palette()`] is the perceptual-intent
+//! alternative: it first matches the image's lightness and chroma distribution
+//! to the palette's distribution in Oklab, then you dither the result.
+//!
+//! Use it when an image is washed out or its colors sit far from the palette.
+//! The remap spreads the image across the whole palette instead of collapsing
+//! it onto the few nearest entries.
+//!
+//! ```no_run
+//! use palettize::{dither, remap_to_palette, Palette};
+//!
+//! let img = image::open("input.png").unwrap();
+//! let palette: Palette = vec![
+//!     (26, 28, 76),   // Dark blue
+//!     (240, 208, 96), // Light yellow
+//! ].into();
+//!
+//! // Match the distribution, then dither the full-color result
+//! let remapped = remap_to_palette(&img, &palette, 1.0);
+//! let output = dither(&image::DynamicImage::ImageRgb8(remapped), &palette);
+//! output.save("output.png").unwrap();
+//! ```
+//!
 //! ## Bayer Matrix Levels
 //!
 //! The Bayer matrix level controls the size of the dithering pattern:
@@ -102,7 +128,9 @@ struct ReadmeDoctests;
 pub mod bayer;
 pub mod dither;
 pub mod extract;
+mod oklab;
 pub mod palette;
+pub mod remap;
 
 use image::{DynamicImage, RgbImage};
 
@@ -111,6 +139,7 @@ pub use bayer::generate_bayer_matrix;
 pub use dither::{apply_dithering, color_distance_sq, find_two_nearest};
 pub use extract::{extract_palette_kmeans, extract_palette_median_cut};
 pub use palette::{Color, Palette, ParseColorError, grayscale, parse_hex_color};
+pub use remap::remap_to_palette;
 
 /// Default Bayer matrix level used by [`dither()`].
 ///
