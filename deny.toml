@@ -1,0 +1,28 @@
+[graph]
+all-features = true
+
+[advisories]
+ignore = [
+  # `paste` is unmaintained. It reaches this workspace only through
+  # image -> ravif -> rav1e, and has no replacement advisory to act on.
+  "RUSTSEC-2024-0436",
+]
+
+[licenses]
+allow = [
+  "MIT",
+  "Apache-2.0",
+  "Apache-2.0 WITH LLVM-exception",
+  "BSD-2-Clause",
+  "BSD-3-Clause",
+  "NCSA",
+  "Unicode-3.0",
+  "Zlib",
+]
+
+[bans]
+multiple-versions = "warn"
+
+[sources]
+unknown-registry = "deny"
+unknown-git = "deny"
