@@ -13,7 +13,7 @@ version = "0.2.0"
 [workspace.dependencies]
 # Version 0.25.9 selects a JPEG decoder that does not compile on Rust 1.85 on
 # AArch64. Keep the newest 0.25 release that preserves the declared MSRV.
-image = "=0.25.8"
+image = "=0.25.10"
 
 [workspace.lints.rust]
 missing_docs = "warn"
